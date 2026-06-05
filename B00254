@@ -186,7 +186,7 @@ begin
          and c_currency = v_cur
          and c_forms = v_maubieu
          and c_periods = v_periods
-         and n_ord = 46;
+         and n_ord = 45;
          commit;
          
          update tbl_fin_tt35_template
