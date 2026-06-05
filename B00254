@@ -9,7 +9,7 @@
        c101         number,
        c108         number,
        c102         number,
-       c103         number
+       c102         number
       );
   type t_data is table of r_data index by pls_integer;
   type t_tbl_param is table of tbl_fin_tt35_template_param%rowtype index by pls_integer;
