@@ -1,0 +1,247 @@
+  procedure proc_B00254_M(i_YYYYMM varchar2, o_result out varchar2) IS
+  type r_data is record
+      (
+       product_type varchar(100),
+       cust_type    varchar(100),
+       region       varchar(100),
+       term         varchar(100),
+       purpose      varchar(100),
+       c101         number,
+       c108         number,
+       c102         number,
+       c103         number
+      );
+  type t_data is table of r_data index by pls_integer;
+  type t_tbl_param is table of tbl_fin_tt35_template_param%rowtype index by pls_integer;
+  type t_tbl_result is table of tbl_fin_tt35_template%rowtype index by pls_integer;
+  v_data           t_data;
+  v_tbl_param      t_tbl_param;
+  v_tbl_result     t_tbl_result;
+  v_workingdate    date;
+  v_cur         varchar2(3) := 'VND';
+  v_maubieu     varchar2(10) := 'B00254';
+  v_periods     varchar2(2):= 'M';
+  v_begin_run   date;
+  v_code        varchar2(50);
+  v_err         varchar2(32767);
+begin
+    ---- ghi log chay
+    v_begin_run := sysdate;
+    v_code := '';
+    v_err := '';
+    insert into tbl_fin_tt35_log (c_forms, d_begin_runtime, c_context, c_monthid)
+    values (v_maubieu, v_begin_run, 'Bat dau chay '|| v_maubieu, i_YYYYMM);
+    commit;
+    ----
+    select * bulk collect
+        into v_tbl_param
+        from tbl_fin_tt35_template_param
+       where c_forms = v_maubieu
+         and c_delete <> 'Y';
+
+    select * bulk collect
+      into v_tbl_result
+      from tbl_fin_tt35_template
+    where 0 = 1;
+     ---
+    delete tbl_fin_tt35_template
+     where C_MONTHID = i_YYYYMM --and d_date = v_workingdate
+       and c_forms = v_maubieu
+       and c_currency = v_cur
+       and c_periods = v_periods;
+    commit;
+
+    v_workingdate := last_day(to_date(i_YYYYMM,'yyyymm'));
+
+    ---lay so lieu
+    execute immediate'select product_type,
+                             cust_type,
+                             region,
+                             term,
+                             purpose,
+                             c101,
+                             c108,
+                             c102,
+                             c103
+                      from V_FIN_SBV_TGCV_ML_V2
+                      where monthid = '||i_YYYYMM
+                      bulk collect into v_data;
+
+    -----tinh so lieu
+    if v_tbl_param.count > 0 then
+      for i in v_tbl_param.first .. v_tbl_param.last loop
+        v_tbl_result(i).c_forms    := v_tbl_param(i).C_forms;
+        v_tbl_result(i).n_ord      := v_tbl_param(i).n_ord;
+        v_tbl_result(i).c_id       := v_tbl_param(i).c_id;
+        v_tbl_result(i).c_name     := v_tbl_param(i).c_name;
+        v_tbl_result(i).c_currency := v_tbl_param(i).c_currency;
+        v_tbl_result(i).n_unit    := v_tbl_param(i).n_unit;
+        v_tbl_result(i).cl_sqlcmd := v_tbl_param(i).cl_sqlcmd;
+        v_tbl_result(i).d_date    := v_workingdate;
+        v_tbl_result(i).d_daterun := sysdate;
+        v_tbl_result(i).c_monthid := i_YYYYMM;
+        v_tbl_result(i).cl_sqlcmd := v_tbl_param(i).cl_sqlcmd;
+        v_tbl_result(i).c_periods := v_periods;
+        v_tbl_result(i).c_param1 := v_tbl_param(i).c_param01;
+        v_tbl_result(i).c_param2 := v_tbl_param(i).c_param02;
+        v_tbl_result(i).c_param3 := v_tbl_param(i).c_param03;
+        v_tbl_result(i).c_param4 := v_tbl_param(i).c_param04;
+        v_tbl_result(i).c_param5 := v_tbl_param(i).c_param05;
+        v_tbl_result(i).n_num01 := 0;
+        v_tbl_result(i).n_num02 := 0;
+        v_tbl_result(i).n_num03 := 0;
+        v_tbl_result(i).n_num04 := 0;
+        /*v_tbl_result(i).n_num05 := 0;
+        v_tbl_result(i).n_num06 := 0;
+        v_tbl_result(i).n_num07 := 0;
+        v_tbl_result(i).n_num08 := 0;
+        v_tbl_result(i).n_num09 := 0;
+        v_tbl_result(i).n_num10 := 0;
+        v_tbl_result(i).n_num11 := 0;
+        v_tbl_result(i).n_num12 := 0;
+        v_tbl_result(i).n_num13 := 0;
+        v_tbl_result(i).n_num14 := 0;
+        v_tbl_result(i).n_num15 := 0;*/
+        v_tbl_result(i).n_order := v_tbl_param(i).n_order;
+
+        if v_data.count > 0 then
+          for j in v_data.first .. v_data.last loop
+            if v_tbl_param(i).c_param01 = v_data(j).product_type 
+              and v_tbl_param(i).c_param02 = v_data(j).cust_type
+              and v_tbl_param(i).c_param03 = v_data(j).region
+              and v_tbl_param(i).c_param04 = v_data(j).term
+              and v_tbl_param(i).c_param05 = v_data(j).purpose
+               then v_tbl_result(i).n_num01 := v_data(j).C101;
+                    v_tbl_result(i).n_num02 := v_data(j).C108;
+                    v_tbl_result(i).n_num03 := v_data(j).C102;
+                    v_tbl_result(i).n_num04 := v_data(j).C103;
+            end if;
+          end loop;
+        end if;
+      end loop;
+      --Do du lieu
+      if v_tbl_result.count > 0 then
+        forall i in v_tbl_result.first .. v_tbl_result.last
+          insert into tbl_fin_tt35_template values v_tbl_result (i);
+        commit;
+      end if;
+
+      --Lam tron 2 chu so thap phan
+      update tbl_fin_tt35_template
+         set n_num01 = round(n_num01,2),
+             n_num02 = round(n_num02,2),
+             n_num03 = round(n_num03,2),
+             n_num04 = round(n_num04,2)
+       where c_monthid = i_YYYYMM
+         and c_currency = v_cur
+         and c_forms = v_maubieu
+         and c_periods = v_periods;
+      commit;
+      --set null cac truong ko lay du lieu
+      update tbl_fin_tt35_template
+         set n_num01 = null,
+             n_num02 = null,
+             n_num03 = null,
+             n_num04 = null
+         where c_monthid = i_YYYYMM
+         and c_currency = v_cur
+         and c_forms = v_maubieu
+         and c_periods = v_periods
+         and c_param1 is null
+         /*and c_param2 is null
+         and c_param3 is null
+         and c_param4 is null
+         and c_param5 is null*/;
+      commit;
+      -- set null cac muc khong phat sinh so du
+      update tbl_fin_tt35_template
+         set n_num01 = null,
+             n_num02 = null
+         where c_monthid = i_YYYYMM
+         and c_currency = v_cur
+         and c_forms = v_maubieu
+         and c_periods = v_periods
+         and n_num02 = 0;
+      commit;
+      update tbl_fin_tt35_template
+         set n_num03 = null,
+             n_num04 = null
+         where c_monthid = i_YYYYMM
+         and c_currency = v_cur
+         and c_forms = v_maubieu
+         and c_periods = v_periods
+         and n_num04 = 0;
+      commit;
+         update tbl_fin_tt35_template
+         set n_num04 = ( 
+                  select nvl(sum(C103),0)
+                  from V_FIN_SBV_TGCV_CHOVAY_SBV_ML_V2
+                 where monthid = i_YYYYMM
+                 AND PRODUCT_TYPE = 'LOAN'
+                 AND CUST_TYPE = 'ALL'
+                 AND REGION = 'ALL'
+                 AND TERM = 'NGANHAN'
+                 AND PURPOSE IN ('TIEUDUNG','BDS'))
+         where c_monthid = i_YYYYMM
+         and c_currency = v_cur
+         and c_forms = v_maubieu
+         and c_periods = v_periods
+         and n_ord = 45;
+         commit;
+         
+         update tbl_fin_tt35_template
+         set n_num04 = 
+                ( 
+                 SELECT SUM(val) from (
+                 select nvl(sum(C103),0) val
+                 from V_FIN_SBV_TGCV_CHOVAY_SBV_ML_V2
+                 where monthid = i_YYYYMM
+                 AND PRODUCT_TYPE = 'LOAN'
+                 AND CUST_TYPE = 'ALL'
+                 AND REGION = 'ALL'
+                 AND TERM = 'NGANHAN'
+                 AND PURPOSE IN ('TIEUDUNG','BDS')
+                 
+                 union all 
+                 
+                 select nvl(sum(C103),0)
+                 from V_FIN_SBV_TGCV_CHOVAY_SBV_ML_V2
+                 where monthid = i_YYYYMM
+                 AND PRODUCT_TYPE = 'LOAN'
+                 AND CUST_TYPE = 'ALL'
+                 AND REGION = 'ALL'
+                 AND TERM = 'TRUNGDAIHAN'
+                 AND PURPOSE = 'ALL' )
+                 )
+         where c_monthid = i_YYYYMM
+         and c_currency = v_cur
+         and c_forms = v_maubieu
+         and c_periods = v_periods
+         and n_ord = 49;
+         commit;
+         
+    end if;
+    ---ghi log
+    o_result := 'Tao du lieu thanh cong';
+    update tbl_fin_tt35_log
+       set d_end_runtime = sysdate,
+           c_status = 'S',
+           c_context = o_result,
+           d_date = v_workingdate
+     where c_forms = v_maubieu
+       and d_begin_runtime = v_begin_run;
+    commit;
+  exception
+    when others then
+      v_code := sqlcode;
+      v_err := substr(sqlerrm ||'-'||v_err,1,3900);
+    update tbl_fin_tt35_log
+       set d_end_runtime = sysdate,
+           c_status = 'E',
+           c_context = v_code ||'-'|| v_err,
+           d_date = v_workingdate
+     where c_forms = v_maubieu
+       and d_begin_runtime = v_begin_run;
+      commit;
+      o_result := 'Loi - Xem log chay';
+  end;
